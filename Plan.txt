@@ -1,0 +1,142 @@
+# Not used in code, just written at start to write requirements, ideas, and plan
+All:
+    All policies, roles, code, templates to be given:
+        - Define all in project, programatically deploy
+        - Write policies/roles for each service in project, either deploy or copy + paste
+    Need to show config, running, testing, need to have error catching:
+        - Create config dir for all config
+        - Config for each service and config for global, pass config into Functions
+        - YAML config as CloudFormation can be YAML
+        - Moto to write unit tests
+    Need to comment all parts of code to describe
+    All resource names need student ID appended to end:
+        - Just give this in name in configs, not usually needed so doesn't make sense to create function for it
+    Write cleanup function for everything
+1:
+    Create EC2 instance:
+        using: boto3
+        details:
+            - Don't create subnets route tables etc.
+            - Use default VPC and subnet
+        plan:
+            - YAML config & py functions
+        role:
+            - upload to s3 bucket
+            - read s3 bucket
+    Create DynamoDB table:
+        using: boto3
+        details:
+            - Single table
+            - Single partition key being the image name
+        plan:
+            - YAML config & py functions
+            - Need to do some checking/handling when image of same name is uploaded - do at multiple stages, but do from earliest point for cost purposes
+                - Check to see if image name is already in S3 from EC2
+                - Check if image name is already in dynamoDB from lambda 1
+        schema:
+            - name : string (partition key)
+            - datetime recieved: date
+            - driving:
+                value: boolean
+                confidence: double
+            - emotion: (secondary index?)
+                value: string
+                confidence: double
+            - email sent: boolean (secondary index?)
+            - email sent on: date
+    Create SQS queue:
+        using: CloudFormation template
+        details:
+            - should be parameterised
+        plan:
+            - YAML template
+    Create S3 bucket:
+        using: CloudFormation template
+        details:
+            - should be parameterised
+        plan:
+            - YAML template
+2:
+    Describe the EC2 instance config, software, and image upload to EC2:
+        plan:
+            - Config, roles, defined in 1
+            - Script, software defined next
+    Upload the image files one after another at 30 s intervals to the S3 bucket:
+        using: Boto3 on EC2 instance
+        plan:
+            - Py script to run on EC2
+            - Check s3 bucket for image name
+            - Programatically run on it?
+            - File type and size checking
+    Provide the config details for the image upload to send to SQS queue that triggers Lambda:
+        plan:
+            - Define YAML structure for message with types as single source of truth
+            - Use this in code to deploy:
+                - SQS
+                - Lambda
+            - Contents:
+                - name
+                - date
+3:
+    Create Lambda function 1:
+        using: AWS console, CLI, or SDK
+        trigger: SQS queue message
+        functions:
+            - Extract metadata from SQS message
+            - Invoke AWS Rekognition services (call for label detection and face detection)
+        plan:
+            - Boto3 py functions and YAML config
+        role:
+            - Invoke AWS Rekognition label and face detection
+    Create SNS topic and provide config details for sending email
+4:
+    Add to Lambda function 1:
+        functions:
+            - Extract details from the label and face detection
+            - Store extracted values for driving and emotions with confidance vals in DynamoDB:
+                emotions:
+                    {'ANGRY' AND 'DISGUSTED'}
+        role:
+            - Read dynamoDB table
+            - Write to dynamoDB table 
+    Create Lambda function 2:
+        using: ??
+        trigger: Data insertion to dynamoDB table (dynamoDB streams?)
+        functions:
+            - Read dynamoDB insertion value
+            - Create email body
+            - If driving detected and person angry with confidance level above 80% send email to emails subscribes so SNS from 3
+        plan:
+            - Py Boto3
+            - Have value of email sent in db, maybe date sent, so need to check it and set it, dynamoDB should have this as secondary key
+        roles:
+            - Read dynamoDB
+            - Write to dynamoDB
+            - Publish to SNS topic
+5:
+    Discuss:
+        Describe:
+            - Purpose of report/solution
+            - Problem to be solved
+            - Solution given
+        Evaluate:
+            - Current solution
+            - Suggest improvements and changes to architechture with justification
+    Discuss how this appication could be implemented on other cloud platforms (only Azure or GCP):
+        Azure:
+            like for like:
+                s3: Azure BLOB
+                Lambda: Azure functions
+                dynamoDB: Azure cosmosDB
+                SQS: Azure Storage Queues
+                Rekognition: Azure AI vision
+                EC2: Azure vms
+    Appraisal of security:
+        - roles/policies
+        - checks
+    Analysis of cost optimisation:
+        - consider:
+            - many file uploads
+            - running over long period
+
+
