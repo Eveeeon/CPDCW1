@@ -9,7 +9,7 @@ All:
                 - get details with boto3 and attach policies/roles with boto3
                     - policies need to be in JSON
                 - can give * for accountid and region while still scoping to the resource name so can give as static files
-                - 
+            - programatically created execution roles and instance roles require trust policies to be applied
     Need to show config, running, testing, need to have error catching:
         - Create config dir for all config
         - Config for each service and config for global, pass config into Functions
@@ -62,6 +62,9 @@ Task breakdown:
             using: CloudFormation template
             details:
                 - should be parameterised
+                - include notification
+                    - can do put, post, or both
+                    - put for only triggering on new images
             plan:
                 - YAML template
     2:
@@ -154,17 +157,33 @@ resource breakdown:
         name: ec2-upload-s2264323
         create with: Boto3
         policies:
+            ec2 instance profile:
+                S3:
+                    bucket-images-2264323:
+                        listBucket
+                        putObject
     Lambda send email:
         name: lambda-email-s2264323
         create with: Boto3
         policies:
+            execution role:
+                sns:
+                    topic:
+                        publish
+                        email-topic-s2264323
     Lambda image detection:
         name: lambda-detection-s2264323
         create with: Boto3
         policies:
+            execution role:
+                rekognition:
+                    
     S3:
         name: bucket-images-2264323
         create with: cloudformation
+        notification:
+            topic: new-image-notification-s2264323
+            event: s3:ObjectCreated:Put
     dynamodb:
         name: dynamodb-images-s2264323
         create with: Boto3
@@ -172,9 +191,16 @@ resource breakdown:
     SQS:
         name: queue-images-s2264323
         create with: cloudformation
+        policies:
+            SQS:SendMessage
+                Condition:
+                    ArnLike:
+                        SourceArn: bucket-images-2264323
     Rekognition:
         name: rekognition-images-s2264323
         create with: Boto3
+    SNS Topic:
+        name: email-topic-s2264323
     policies/roles:
         create with: Boto3
         format: JSON
@@ -184,6 +210,16 @@ resource breakdown:
 
 
 references/links:
+    cloudformation:
+        s3:
+            notification:
+                https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-properties-s3-bucket-notificationconfiguration.html
+                queueconfiguration:
+                    https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-properties-s3-bucket-queueconfiguration.html
     iam:
         policy generation: https://awspolicygen.s3.amazonaws.com/policygen.html
         boto3 policies: https://docs.aws.amazon.com/boto3/latest/reference/services/iam/client/create_policy.html
+        SQS: https://docs.aws.amazon.com/AmazonS3/latest/userguide/ways-to-add-notification-config-to-bucket.html
+        ec2 instance profile: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html
+        lambda execution role: https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html
+        cloudformation iam role EC2: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/quickref-iam.html#scenarios-iamroles

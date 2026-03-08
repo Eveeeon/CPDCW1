@@ -1,0 +1,26 @@
+student-id: s2264323
+
+resources:
+  ec2:
+    upload-image: ec2-upload-s2264323
+  s3:
+    image-bucket: bucket-images-2264323
+  lambda:
+    image-detection: lambda-detection-s2264323
+    send-email: lambda-email-s2264323
+  sqs:
+    notify-image: queue-images-s2264323
+  sns:
+    email-topic: email-topic-s2264323
+  dynamodb:
+    images-db: dynamodb-images-s2264323
+  rekognition:
+    image-detection: rekognition-images-s2264323
+
+iam:
+  ec2:
+    upload-image: bucket-images-role-2264323
+  lambda:
+    image-detection: lambda-detection-role-s2264323
+    send-email: lambda-email-role-s2264323
+

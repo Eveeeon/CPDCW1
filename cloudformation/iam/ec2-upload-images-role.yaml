@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  Ec2RoleName:
+    Description: The name of the role to be assumed by the EC2 instance
+    Type: String
+  Ec2PolicyName:
+    Description: The name of the policy attached to the role
+    Type: String
+  S3BucketName:
+    Description: The name of the S3 bucket to provice access to 
+    Type: String
+  
+Resources:
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Ref Ec2RoleName
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+  EC2RolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Ref Ec2PolicyName
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:ListBucket
+          Resource:
+            - !Sub "arn:aws:s3:::${S3BucketName}"
+            - !Sub "arn:aws:s3:::${S3BucketName}/*"
+      Roles:
+      - !Ref EC2Role
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+      - !Ref EC2Role
