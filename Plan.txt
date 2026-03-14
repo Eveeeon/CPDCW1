@@ -223,3 +223,12 @@ references/links:
         ec2 instance profile: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html
         lambda execution role: https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html
         cloudformation iam role EC2: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/quickref-iam.html#scenarios-iamroles
+    boto3:
+        ec2:
+            create: https://docs.aws.amazon.com/boto3/latest/reference/services/ec2/service-resource/create_instances.html
+            AMI:
+                ssm: 
+                    - https://www.saisci.com/aws/list-of-public-ssm-parameters-for-amazon-linux-amis-ami-amazon-linux-latest/
+                    - https://docs.aws.amazon.com/boto3/latest/reference/services/ssm/client/get_parameter.html
+            describesubnets:
+                - https://docs.aws.amazon.com/boto3/latest/reference/services/ec2/client/describe_subnets.html

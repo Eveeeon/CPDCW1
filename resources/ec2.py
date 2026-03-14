@@ -1,16 +1,161 @@
 # Operations to manage EC2 infrastructure
+import boto3
+from typing import dict, list
 
-def ec2_create():
-    return
+def get_ami_id(ssm_client: boto3.client, ami_name: str) -> str:
+    """
+    Gets the latest ami id for a give ami name
 
-def ec2_destroy():
-    return
+    Args:
+        ssm_client (boto3.client): a boto3 ssm client instance
+        ami_name (str): amazon machine image name
 
-def ec2_start():
-    return
+    Returns:
+        str: amazon machine image name
+    """
+    return ssm_client.get_parameter(Name=ami_name)['Parameter']['Value']
 
-def ec2_stop():
-    return
 
-def ec2_describe():
-    return
+def ec2_create(
+    ec2_client: boto3.client,
+    ami_id: str,
+    instance_profile_name: str,
+    instance_type: str = "t3.micro",
+    min_count: int = 1,
+    max_count: int = 1,
+    disk_size: int = None,
+    disk_device_name: str = None,
+    tags: dict = None,
+    subnet: str = None,
+    security_groups: list[str] = None,
+) -> dict:
+    """
+    Creates an EC2 instance in a running state
+
+    Args:
+        ec2_client (boto3.client): a boto3 ec2 client instance
+        ami_id (str): the id of the ami (amazon machine image)
+        instance_profile_name (str): name given to the instance
+        instance_type (str, optional): type of ec2 instance. Defaults to "t3.micro".
+        min_count (int, optional): minimum number of instances. Defaults to 1.
+        max_count (int, optional): maximum number of instances. Defaults to 1.
+        disk_size (int, optional): the size of the disk in gb, if given, disk_device_name also needs to be given. Defaults to None, so the aws default will be used.
+        disk_device_name (str, optional): the name of the disk, if given, disk_size also needs to be given. Defaults to None, so the aws default will be used.
+        tags (dict, optional): tags to be added to the instance. Defaults to None.
+        subnet (str, optional): the subnet id. Defaults to None and so the default subnet of the default vpc will be used.
+        security_groups (list[str], optional): list of security group ids. Defaults to None
+    
+    Raises:
+        ValueError: if subnet is not found
+        ValueError: if any of the security groups are not found
+
+    Returns:
+        dict: the launch request
+    """
+    # create specification dict to add params to pass into creation
+    # other params are optional
+    instance_specification = {
+        "ImageId": ami_id,
+        "InstanceType": instance_type,
+        "IAMInstanceProfile": {"Name": instance_profile_name},
+        "MinCount": min_count,
+        "MaxCount": max_count,
+    }
+
+    # OPTIONALS ------------------
+    # --- add tags if given
+    if tags:
+        instance_specification["TagSpecifications"] = {
+            "ResourceType": "instance",
+            "Tags": [{"Key": key, "Value": value} for key, value in tags.items()],
+        }
+
+    # --- add disk if given
+    if disk_size and disk_device_name:
+        instance_specification["BlockDeviceMappings"] = [
+            {
+                "DeviceName": disk_device_name,
+                "Ebs": {"VolumeSize": disk_size, "DeleteOnTermination": True},
+            }
+        ]
+
+    # --- add subnet if given
+    if subnet:
+        # --- validate subnet exists, else throw
+        results = ec2_client.describe_subnets(
+            Filters=[{"Name": "subnet-id", "Values": [subnet]}]
+        )
+        if len(results["Subnets"]) == 0:
+            raise ValueError(f'Subnet {subnet} not found')
+        
+        # --- add to specification
+        instance_specification["SubnetId"] = subnet
+
+    # --- add security groups if given
+    if security_groups:
+        # --- describe security groups filtering by given group ids
+        results = ec2_client.describe_security_groups(GroupIds=security_groups)
+        found_ids = [sg['GroupId'] for sg in results['SecurityGroups']]
+        # --- ensure all groups were found, else throw
+        missing = set(security_groups) - set(found_ids)
+        if len(missing) > 0:
+            raise ValueError(f"Could not find security groups: {missing}")
+        
+        # --- add to specification
+        instance_specification["SecurityGroupIds"] = [
+            {"GroupId": group} for group in security_groups.items()
+        ]
+
+    return ec2_client.run_instances(**instance_specification)
+
+def ec2_terminate(ec2_client: boto3.client, instance_id: str)-> dict:
+    """
+    Terminate an ec2 instance
+
+    Args:
+        ec2_client (boto3.client): a boto3 ec2 client instance
+        instance_id (str): instance id of the ec2 instance
+
+    Returns:
+        dict: information about the terminated instance
+    """
+    return ec2_client.terminate_instances(InstanceIds=[instance_id])
+
+def ec2_start(ec2_client: boto3.client, instance_id: str)-> dict:
+    """
+    Start an existing ec2 instance
+
+    Args:
+        ec2_client (boto3.client): a boto3 ec2 client instance
+        instance_id (str): instance id of the ec2 instance
+
+    Returns:
+        dict: information about the started instance
+    """
+    return ec2_client.start_instances(InstanceIds=[instance_id])
+
+def ec2_stop(ec2_client: boto3.client, instance_id: str) -> dict:
+    """
+    Stop a running ec2 instance
+
+    Args:
+        ec2_client (boto3.client): a boto3 ec2 client instance
+        instance_id (str): instance id of the ec2 instance
+
+    Returns:
+        dict: information about the stopped instance
+    """
+    return ec2_client.stop_instances(InstanceIds=[instance_id])
+
+def ec2_describe(ec2_client: boto3.client, instance_id: str)-> dict:
+    """
+    Describes the state of an ec2 instance
+
+    Args:
+        ec2_client (boto3.client): a boto3 ec2 client instance
+        instance_id (str): instance id of the ec2 instance
+
+    Returns:
+        dict: the description of the ec2 instance
+    """
+    return ec2_client.describe_instances(InstanceIds=[instance_id])

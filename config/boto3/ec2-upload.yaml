@@ -1,0 +1,14 @@
+tags:
+ami:
+instance-type: "t3.micro"
+vpc:
+subnet:
+security-group:
+storage:
+termination-protection:
+
+
+ebs:
+image-id:
+instance-type:
+
