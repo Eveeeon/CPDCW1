@@ -28,7 +28,7 @@ def ec2_create(
     tags: dict = None,
     subnet: str = None,
     security_groups: list[str] = None,
-) -> dict:
+) -> str:
     """
     Creates an EC2 instance in a running state
 
@@ -50,10 +50,10 @@ def ec2_create(
         ValueError: if any of the security groups are not found
 
     Returns:
-        dict: the launch request
+        str: the instance id
     """
-    # create specification dict to add params to pass into creation
-    # other params are optional
+    # --- create specification dict to add params to pass into creation
+    # --- other params are optional
     instance_specification = {
         "ImageId": ami_id,
         "InstanceType": instance_type,
@@ -64,11 +64,12 @@ def ec2_create(
 
     # OPTIONALS ------------------
     # --- add tags if given
-    if tags:
-        instance_specification["TagSpecifications"] = {
+    instance_specification["TagSpecifications"] = [
+        {
             "ResourceType": "instance",
             "Tags": [{"Key": key, "Value": value} for key, value in tags.items()],
         }
+    ]
 
     # --- add disk if given
     if disk_size and disk_device_name:
@@ -102,11 +103,16 @@ def ec2_create(
             raise ValueError(f"Could not find security groups: {missing}")
         
         # --- add to specification
-        instance_specification["SecurityGroupIds"] = [
-            {"GroupId": group} for group in security_groups.items()
-        ]
+        instance_specification["SecurityGroupIds"] = security_groups
 
-    return ec2_client.run_instances(**instance_specification)
+    response = ec2_client.run_instances(**instance_specification)
+    instance_id = response["Instances"][0]["InstanceId"]
+
+
+    waiter = ec2_client.get_waiter("instance_running")
+    waiter.wait(InstanceIds=[instance_id])
+
+    return instance_id
 
 def ec2_terminate(ec2_client: boto3.client, instance_id: str)-> dict:
     """
@@ -119,7 +125,10 @@ def ec2_terminate(ec2_client: boto3.client, instance_id: str)-> dict:
     Returns:
         dict: information about the terminated instance
     """
-    return ec2_client.terminate_instances(InstanceIds=[instance_id])
+    response = ec2_client.terminate_instances(InstanceIds=[instance_id])
+    waiter = ec2_client.get_waiter("instance_terminated")
+    waiter.wait(InstanceIds=[instance_id])
+    return response
 
 def ec2_start(ec2_client: boto3.client, instance_id: str)-> dict:
     """
@@ -132,7 +141,10 @@ def ec2_start(ec2_client: boto3.client, instance_id: str)-> dict:
     Returns:
         dict: information about the started instance
     """
-    return ec2_client.start_instances(InstanceIds=[instance_id])
+    response = ec2_client.start_instances(InstanceIds=[instance_id])
+    waiter = ec2_client.get_waiter("instance_running")
+    waiter.wait(InstanceIds=[instance_id])
+    return response
 
 def ec2_stop(ec2_client: boto3.client, instance_id: str) -> dict:
     """
@@ -145,7 +157,10 @@ def ec2_stop(ec2_client: boto3.client, instance_id: str) -> dict:
     Returns:
         dict: information about the stopped instance
     """
-    return ec2_client.stop_instances(InstanceIds=[instance_id])
+    response = ec2_client.terminate_instances(InstanceIds=[instance_id])
+    waiter = ec2_client.get_waiter("instance_stopped")
+    waiter.wait(InstanceIds=[instance_id])
+    return response
 
 def ec2_describe(ec2_client: boto3.client, instance_id: str)-> dict:
     """

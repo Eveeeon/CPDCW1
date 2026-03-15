@@ -1,6 +1,7 @@
 # Not used in code, just written at start to write requirements, ideas, and plan
 All:
     All policies, roles, code, templates to be given:
+        - Can't use/create them in learner lab, but create project with them ready
         - Define all in project, programatically deploy
         - Write policies/roles for each service in project, either deploy or copy + paste
             - Need to consider/handle resource arns for different accoundids, which would change every time
@@ -224,11 +225,18 @@ references/links:
         lambda execution role: https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html
         cloudformation iam role EC2: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/quickref-iam.html#scenarios-iamroles
     boto3:
+        waiters: https://docs.aws.amazon.com/boto3/latest/reference/services/acm/client/get_waiter.html
         ec2:
             create: https://docs.aws.amazon.com/boto3/latest/reference/services/ec2/service-resource/create_instances.html
             AMI:
                 ssm: 
                     - https://www.saisci.com/aws/list-of-public-ssm-parameters-for-amazon-linux-amis-ami-amazon-linux-latest/
                     - https://docs.aws.amazon.com/boto3/latest/reference/services/ssm/client/get_parameter.html
+                    - https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-public-parameters-ami.html
+                    - https://docs.aws.amazon.com/linux/al2023/ug/ec2.html
             describesubnets:
                 - https://docs.aws.amazon.com/boto3/latest/reference/services/ec2/client/describe_subnets.html
+        dynamoDB:
+            create: https://docs.aws.amazon.com/boto3/latest/reference/services/dynamodb/client/create_table.html
+            update: https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_UpdateTable.html
+            stream trigger: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Streams.Lambda.Tutorial2.html#Streams.Lambda.Tutorial2.CDK
