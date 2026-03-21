@@ -28,6 +28,7 @@ def ec2_create(
     tags: dict = None,
     subnet: str = None,
     security_groups: list[str] = None,
+    user_data_script_path: str = None, 
 ) -> str:
     """
     Creates an EC2 instance in a running state
@@ -44,6 +45,7 @@ def ec2_create(
         tags (dict, optional): tags to be added to the instance. Defaults to None.
         subnet (str, optional): the subnet id. Defaults to None and so the default subnet of the default vpc will be used.
         security_groups (list[str], optional): list of security group ids. Defaults to None
+        user_data_script_path: (str): path of script to run on the instance on start. Defaults to None
     
     Raises:
         ValueError: if subnet is not found
@@ -105,6 +107,12 @@ def ec2_create(
         # --- add to specification
         instance_specification["SecurityGroupIds"] = security_groups
 
+    # --- add user data script if given
+    if user_data_script_path:
+        with open(user_data_script_path, "r") as script:
+            user_data = script.read()
+            instance_specification["UserData"] = user_data
+
     response = ec2_client.run_instances(**instance_specification)
     instance_id = response["Instances"][0]["InstanceId"]
 
@@ -157,7 +165,7 @@ def ec2_stop(ec2_client: boto3.client, instance_id: str) -> dict:
     Returns:
         dict: information about the stopped instance
     """
-    response = ec2_client.terminate_instances(InstanceIds=[instance_id])
+    response = ec2_client.stop_instances(InstanceIds=[instance_id])
     waiter = ec2_client.get_waiter("instance_stopped")
     waiter.wait(InstanceIds=[instance_id])
     return response

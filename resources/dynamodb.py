@@ -8,7 +8,7 @@ def dynamodb_create_table(
     table_name: str,
     partition_key_name: str,
     partition_key_type: str,
-):
+) -> dict:
     """
     Create a pay per request dynamodb table with a single partition key
 
@@ -43,7 +43,7 @@ def dynamodb_create_table(
     return response
 
 
-def dynamodb_create_new_item_stream(dynamodb_client: boto3.client, table_name: str):
+def dynamodb_create_new_item_stream(dynamodb_client: boto3.client, table_name: str) -> dict:
     """
     Update a dynamodb table to add a stream for new items in the table
 
@@ -62,7 +62,7 @@ def dynamodb_create_new_item_stream(dynamodb_client: boto3.client, table_name: s
     return response
 
 
-def dynamodb_delete(dynamodb_client: boto3.client, table_name: str):
+def dynamodb_delete(dynamodb_client: boto3.client, table_name: str) -> dict:
     """
     Delete a dynamodb table
 
@@ -82,7 +82,7 @@ def dynamodb_delete(dynamodb_client: boto3.client, table_name: str):
     return response
 
 
-def dynamodb_describe(dynamodb_client: boto3.client, table_name: str):
+def dynamodb_describe(dynamodb_client: boto3.client, table_name: str) -> dict:
     """
     Get details of a dynamodb table
 
@@ -95,3 +95,19 @@ def dynamodb_describe(dynamodb_client: boto3.client, table_name: str):
     """
     response = dynamodb_client.describe_table(TableName=table_name)
     return response
+
+
+def dynamodb_get_stream_arn(dynamodb_client: boto3.client, table_name: str) -> str:
+    """
+    Gets the stream arn of a dynamodb table
+
+    Args:
+        dynamodb_client (boto3.client): a boto3 dynamodb client insance
+        table_name (str): name of the table
+
+    Returns:
+        str: the stream arn of the dynamodb table
+    """
+
+    response = dynamodb_describe(dynamodb_client, table_name)
+    return response["Table"].get("LatestStreamArn")

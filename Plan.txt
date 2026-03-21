@@ -80,6 +80,11 @@ Task breakdown:
                 - Check s3 bucket for image name
                 - Programatically run on it?
                 - File type and size checking
+                - deploy app:
+                    - put app in repo
+                    - inject bash script as user data into ec2 deployment
+                        - should clone repo
+                        - start app
         Provide the config details for the image upload to send to SQS queue that triggers Lambda:
             plan:
                 - Define YAML structure for message with types as single source of truth
@@ -217,6 +222,8 @@ references/links:
                 https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-properties-s3-bucket-notificationconfiguration.html
                 queueconfiguration:
                     https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-properties-s3-bucket-queueconfiguration.html
+            boto3:
+                https://docs.aws.amazon.com/boto3/latest/reference/services/s3.html
     iam:
         policy generation: https://awspolicygen.s3.amazonaws.com/policygen.html
         boto3 policies: https://docs.aws.amazon.com/boto3/latest/reference/services/iam/client/create_policy.html
@@ -236,6 +243,8 @@ references/links:
                     - https://docs.aws.amazon.com/linux/al2023/ug/ec2.html
             describesubnets:
                 - https://docs.aws.amazon.com/boto3/latest/reference/services/ec2/client/describe_subnets.html
+            userdata:
+                - https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html
         dynamoDB:
             create: https://docs.aws.amazon.com/boto3/latest/reference/services/dynamodb/client/create_table.html
             update: https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_UpdateTable.html

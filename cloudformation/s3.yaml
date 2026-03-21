@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: S3 bucket and SQS queue
+
+Parameters:
+
+  BucketName:
+    Type: String
+    Description: Name of the S3 bucket
+
+  QueueName:
+    Type: String
+    Description: Name of the SQS queue
+
+
+Resources:
+
+  ImageQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Ref QueueName
+
+
+  ImageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+
+      NotificationConfiguration:
+        QueueConfigurations:
+          - Event: "s3:ObjectCreated:*"
+            Queue: !GetAtt ImageQueue.Arn
+
+
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ImageBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+
+          - Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt ImageQueue.Arn
+            Condition:
+              ArnLike:
+                aws:SourceArn: !GetAtt ImageBucket.Arn
+
+
+Outputs:
+
+  BucketName:
+    Value: !Ref ImageBucket
+
+  QueueURL:
+    Value: !Ref ImageQueue
+
+  QueueArn:
+    Value: !GetAtt ImageQueue.Arn
