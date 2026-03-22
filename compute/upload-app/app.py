@@ -3,10 +3,9 @@ import time
 import logging
 import pathlib
 from pathlib import Path
+from botocore.exceptions import ClientError
 
 # Helpers
-
-
 def check_file_in_s3(s3_client: boto3.client, bucket: str, name_key: str) -> bool:
     """
     Check if a file exists in the bucket to handle duplicate cases
@@ -22,7 +21,8 @@ def check_file_in_s3(s3_client: boto3.client, bucket: str, name_key: str) -> boo
     try:
         s3_client.head_object(Bucket=bucket, Key=name_key)
         return True
-    except Exception as e:
+    # --- catch boto clienterror
+    except ClientError as e:
         error_code = e.response["Error"]["Code"]
         # --- if error code is 404 not found, then there is no image with the same name
         if error_code == "404":
@@ -49,30 +49,60 @@ def upload_file(s3_client: boto3.client, bucket: str, file_path: pathlib.Path):
         raise
 
 
-def get_next_file(directory: str, type_ext: set[str]) -> pathlib.Path:
+def get_next_file(
+    directory: str, type_ext: set[str], max_size_mb: int, min_size_mb: int
+) -> pathlib.Path:
     """
     Gets the next file to be uploaded, takes the oldest file in the directory matching any of the given file extensions
 
     Args:
         directory (str): the directory containing the files
         type_ext (set[str]): set of file extensions e.g. {".png", ".jpg"}
+        max_size_mb (int): max valid file size in mb
+        min_size_mb (int): min valid file size in mb
 
     Returns:
         pathlib.Path: the file path of the next file
     """
     file_dir = Path(directory)
-    # --- get list of valid files by type
-    valid_files = [
+    # --- get generator of valid files
+    valid_files = (
         file
         for file in file_dir.iterdir()
-        if file.is_file() and file.suffix.lower() in type_ext
-    ]
-    if not valid_files:
-        # --- no valid files
-        return None
-    # --- next file is the oldest
-    oldest_file = min(valid_files, key=lambda file: file.stat().st_mtime)
+        if file.is_file() and validate_file(file, type_ext, max_size_mb, min_size_mb)
+    )
+    oldest_file = min(valid_files, key=lambda file: file.stat().st_mtime, default=None)
     return oldest_file
+
+
+def validate_file(
+    file_path: pathlib.Path,
+    type_ext: set[str],
+    max_size_mb: int,
+    min_size_mb: int,
+) -> bool:
+    """
+    Filter function to determine if the file a file is valid
+
+    Args:
+        file_path (pathlib.Path): path of file
+        type_ext (set[str]): set of valid types
+        max_size_mb (int): max valid file size in mb
+        min_size_mb (int): min valid file size in mb
+
+    Returns:
+        bool: if the file is valid
+    """
+
+    if file_path.suffix.lower() not in type_ext:
+        return False
+
+    size_mb = file_path.stat().st_size / (1024 * 1024)
+
+    if size_mb > max_size_mb or size_mb < min_size_mb:
+        return False
+
+    return True
 
 
 def process_file(
@@ -81,6 +111,8 @@ def process_file(
     directory: str,
     type_ext: set[str],
     logger: logging.Logger,
+    max_size_mb: int,
+    min_size_mb: int,    
 ):
     """
     Gets the next file to be uploaded, performs checks, uploads, and deletes the file
@@ -91,8 +123,10 @@ def process_file(
         directory (str): directory of the files to be uploaded
         type_ext (set[str]): set of file extensions e.g. {".png", ".jpg"}
         logger (logging.Logger): logger
+        max_size_mb (int): max valid file size in mb
+        min_size_mb (int): min valid file size in mb
     """
-    next_file = get_next_file(directory, type_ext)
+    next_file = get_next_file(directory, type_ext, max_size_mb, min_size_mb)
     if not next_file:
         # --- no valid files
         return
@@ -130,6 +164,7 @@ def main():
     bucket = "bucket-images-s2264323"
     interval = 30
     valid_extensions = {".jpg", ".jpeg", ".png"}
+    max_size_mb, min_size_mb = 1000, 1
     logging.basicConfig(
         filename=log_file,
         level=logging.INFO,
@@ -153,6 +188,8 @@ def main():
             directory,
             valid_extensions,
             logger,
+            max_size_mb,
+            min_size_mb
         )
 
         time.sleep(interval)
