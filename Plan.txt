@@ -277,3 +277,6 @@ references/links:
         lambda:
             event: https://docs.aws.amazon.com/boto3/latest/reference/services/lambda/client/create_event_source_mapping.html
             deploy: https://docs.aws.amazon.com/boto3/latest/reference/services/lambda/client/create_function.html
+        sns:
+            create: https://docs.aws.amazon.com/boto3/latest/reference/services/sns/client/create_topic.html
+            subscribe: https://docs.aws.amazon.com/boto3/latest/reference/services/sns/client/subscribe.html
