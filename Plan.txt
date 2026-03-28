@@ -110,9 +110,22 @@ Task breakdown:
         Add to Lambda function 1:
             functions:
                 - Extract details from the label and face detection
+                - Send to Rekognition as S3 reference
+                - Needs to be PNG or JPEG
                 - Store extracted values for driving and emotions with confidance vals in DynamoDB:
                     emotions:
                         {'ANGRY' AND 'DISGUSTED'}
+                - Face detection:
+                    - Method: DetectFaces
+                        - Param: EMOTION
+                - Label detection:
+                    - Method: DetectLabels
+                        - Param: min confidance set to 55, we can set manually - set to 80 to minimise pointless data in db?
+                        - LabelInclusionFilters filter for driving?
+                            - Driving is in the latest csv of labels, so provide in inclusion filters
+                        - Result: gives a list of label, confidence pairs
+                            - result.Labels list, containing {aliases:List[{name:}], categoriesList[{name:}], confidence:number, name: str, parents:List[{name:}]}
+
             role:
                 - Read dynamoDB table
                 - Write to dynamoDB table 
@@ -231,6 +244,12 @@ references/links:
         ec2 instance profile: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html
         lambda execution role: https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html
         cloudformation iam role EC2: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/quickref-iam.html#scenarios-iamroles
+    s3-sqs-message:
+        structure: https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-content-structure.html
+        config: https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-configure.html
+        with lambda:
+                    - https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html
+                    - https://docs.aws.amazon.com/lambda/latest/dg/with-s3.html#events-s3
     boto3:
         waiters: https://docs.aws.amazon.com/boto3/latest/reference/services/acm/client/get_waiter.html
         ec2:
@@ -249,3 +268,12 @@ references/links:
             create: https://docs.aws.amazon.com/boto3/latest/reference/services/dynamodb/client/create_table.html
             update: https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_UpdateTable.html
             stream trigger: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Streams.Lambda.Tutorial2.html#Streams.Lambda.Tutorial2.CDK
+            put: https://docs.aws.amazon.com/boto3/latest/reference/services/dynamodb/client/put_item.html
+        rekognition:
+            methods: https://docs.aws.amazon.com/boto3/latest/reference/services/rekognition.html
+            detectfaces: https://docs.aws.amazon.com/rekognition/latest/APIReference/API_DetectFaces.html
+            detectlabels: https://docs.aws.amazon.com/rekognition/latest/APIReference/API_DetectLabels.html
+                labels: https://docs.aws.amazon.com/rekognition/latest/dg/labels.html
+        lambda:
+            event: https://docs.aws.amazon.com/boto3/latest/reference/services/lambda/client/create_event_source_mapping.html
+            deploy: https://docs.aws.amazon.com/boto3/latest/reference/services/lambda/client/create_function.html

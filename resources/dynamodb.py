@@ -2,7 +2,6 @@
 import boto3
 from typing import dict, list
 
-
 def dynamodb_create_table(
     dynamodb_client: boto3.client,
     table_name: str,
