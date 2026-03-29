@@ -9,7 +9,10 @@ from project.resource_deployment import (
     sns_helpers,
 )
 
-def add_to_deployed_resources(deployed_resources: Dict[List], resource_type: str, id: str) -> Dict[List]:
+
+def add_to_deployed_resources(
+    deployed_resources: Dict[List], resource_type: str, id: str
+) -> Dict[List]:
     """
     Helper to add resources to a deployed resources dictionary
     The deployed resources dictionary contains a list of resource ids for each service
@@ -64,23 +67,45 @@ def run():
         ec2_config.get("min-count"),
         ec2_config.get("max-count"),
         tags=deployment_tags,
-        user_data_script_path=str(app_deployment_script)
+        user_data_script_path=str(app_deployment_script),
     )
     # --- add to deployed resources to track
-    deployed_resources = add_to_deployed_resources(deployed_resources, "ec2", ec2_instance_id)
-
+    deployed_resources = add_to_deployed_resources(
+        deployed_resources, "ec2", ec2_instance_id
+    )
 
     # DEPLOY DYNAMODB ---------------------------------------------------
+    # --- create clients
+    dynamodb_client = boto3.client("dynamodb")
+    # --- get config details
+    dynamodb_config = resources.get("dynamodb").get("images-db")
 
+    dynamodb_helpers.dynamodb_create_table(
+        dynamodb_client,
+        dynamodb_config.get("name"),
+        dynamodb_config.get("partition-key"),
+        dynamodb_config.get("partition-key-type"),
+        deployment_tags,
+    )
 
-
+    # --- add to deployed resources to track
+    deployed_resources = add_to_deployed_resources(
+        deployed_resources, "dynamodb", dynamodb_config.get("name")
+    )
 
     # DEPLOY S3 AND SQS ---------------------------------------------------
 
-
-
-
-
-
+    # CREATE TOPIC ---------------------------------------------------
+    # --- create clients
+    sns_client = boto3.client("sns")
+    # --- get config details
+    sns_config = resources.get("sns").get("email-topic")
+    topic_arn = sns_helpers.sns_create_topic(
+        sns_client, sns_config.get("name"), deployment_tags
+    )
+    # --- add to deployed resources to track
+    deployed_resources = add_to_deployed_resources(
+        deployed_resources, "sns", topic_arn
+    )
 
     # DEPLOY LAMBDAS ---------------------------------------------------

@@ -33,6 +33,8 @@ resources:
   dynamodb:
     images-db:
       name: "dynamodb-images-s2264323"
+      partition-key: "name"
+      partition-key-type: "S"
   rekognition:
     image-detection:
       name: "rekognition-images-s2264323"

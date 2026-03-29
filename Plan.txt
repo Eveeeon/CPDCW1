@@ -282,3 +282,6 @@ references/links:
         sns:
             create: https://docs.aws.amazon.com/boto3/latest/reference/services/sns/client/create_topic.html
             subscribe: https://docs.aws.amazon.com/boto3/latest/reference/services/sns/client/subscribe.html
+        cloudformation:
+            create: https://docs.aws.amazon.com/boto3/latest/reference/services/cloudformation/client/create_stack.html
+            

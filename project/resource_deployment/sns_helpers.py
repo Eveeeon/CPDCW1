@@ -1,3 +1,4 @@
+# Operations to manage sns topics
 import boto3
 from typing import Dict
 

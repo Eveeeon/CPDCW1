@@ -30,10 +30,11 @@ Resources:
                       Queue: !GetAtt ImageQueue.Arn
 
     # Policy to allow bucket to send message
-    BucketPolicy:
-        Type: AWS::S3::BucketPolicy
+    SQSPolicy:
+        Type: AWS::SQS::QueuePolicy
         Properties:
-            Bucket: !Ref ImageBucket
+            Queues:
+                - !Ref ImageQueue
             PolicyDocument:
                 Version: "2012-10-17"
                 Statement:
@@ -44,7 +45,7 @@ Resources:
                       Resource: !GetAtt ImageQueue.Arn
                       Condition:
                           ArnLike:
-                              aws:SourceArn: !GetAtt ImageBucket.Arn
+                              aws:SourceArn: !Sub "arn:aws:s3:::${BucketName}"
 
 Outputs:
     BucketName:
