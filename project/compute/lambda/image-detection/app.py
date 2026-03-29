@@ -6,7 +6,6 @@ from typing import List, Dict, Any
 import os
 
 # CONFIG
-table_name = "dynamodb-images-s2264323"
 table_name = os.environ["DB_TABLE_NAME"]
 selected_emotions = ["ANGRY", "DISGUSTED"]
 selected_labels = ["Driving"]

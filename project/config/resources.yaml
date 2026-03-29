@@ -3,6 +3,8 @@ tags:
   course: "gcu-cloudPlatformDevelopment"
   application: "labelAndFaceDetectionSystem"
 
+email: "ebury300@caledonian.ac.uk"
+
 resources:
   ec2:
     upload-image: 

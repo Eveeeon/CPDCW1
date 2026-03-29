@@ -147,6 +147,8 @@ def run():
     )
     # --- add to deployed resources to track
     deployed_resources = add_to_deployed_resources(deployed_resources, "sns", topic_arn)
+    # --- add to config for using later
+    config["runtime"]["sns_topic_arn"] = topic_arn
 
     # DEPLOY LAMBDAS ---------------------------------------------------
     # --- create clients
@@ -158,6 +160,7 @@ def run():
     lambda_img_config = lambda_config.get("image-detection")
     lambda_img_path = base_dir / "compute" / "lambda" / "image-detection"
     lambda_img_zip = lambda_helpers.lambda_zip(lambda_img_path)
+    lambda_img_vars = {"DB_TABLE_NAME": dynamodb_config.get("name")}
     lambda_helpers.lambda_create(
         lambda_client,
         lambda_img_zip,
@@ -165,7 +168,8 @@ def run():
         lambda_img_config.get("role"),
         lambda_img_config.get("runtime"),
         lambda_img_config.get("handler"),
-        deployment_tags,
+        tags=deployment_tags,
+        environment_variables=lambda_img_vars,
     )
 
     # --- create trigger
@@ -184,6 +188,7 @@ def run():
     lambda_email_config = lambda_config.get("send-email")
     lambda_email_path = base_dir / "compute" / "lambda" / "send-email"
     lambda_email_zip = lambda_helpers.lambda_zip(lambda_email_path)
+    lambda_email_vars = {"SNS_TOPIC_ARN": config.get("runtime").get("sns_topic_arn")}
     lambda_helpers.lambda_create(
         lambda_client,
         lambda_email_zip,
@@ -191,12 +196,14 @@ def run():
         lambda_email_config.get("role"),
         lambda_email_config.get("runtime"),
         lambda_email_config.get("handler"),
-        deployment_tags,
+        tags=deployment_tags,
+        environment_variables=lambda_email_vars,
     )
 
     lambda_helpers.lambda_create_dbstream_trigger(
-        lambda_client, config.get("runtime").get("db_stream_arn"),
-        lambda_email_config.get("name")
+        lambda_client,
+        config.get("runtime").get("db_stream_arn"),
+        lambda_email_config.get("name"),
     )
 
     # --- add to deployed resources to track
