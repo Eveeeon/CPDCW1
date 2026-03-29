@@ -7,6 +7,7 @@ from project.resource_deployment import (
     lambda_helpers,
     dynamodb_helpers,
     sns_helpers,
+    cloudformation_helpers,
 )
 
 
@@ -30,7 +31,8 @@ def add_to_deployed_resources(
         deployed_resources[resource_type] = [id]
         return deployed_resources
     else:
-        deployed_resources[resource_type] = deployed_resources[resource_type].append(id)
+        deployed_resources[resource_type].append(id)
+        return deployed_resources
 
 
 def run():
@@ -46,16 +48,19 @@ def run():
     deployment_tags = config.get("tags")
 
     # TRACK EVERYTHING THAT IS DEPLOYED
+    # --- not used as a source of truth for resources, config used for that
+    # --- purpose is to track deployments and terminations
+    # --- keeps only enough information to terminate
     deployed_resources = {}
 
     # DEPLOY EC2 ---------------------------------------------------
     # --- create clients
     ec2_client = boto3.client("ec2")
-    smm_client = boto3.client("smm")
+    ssm_client = boto3.client("ssm")
 
     # --- get config details
     ec2_config = resources.get("ec2").get("upload-image")
-    ami_id = ec2_helpers.get_ami_id(smm_client, ec2_config.get("ami-name"))
+    ami_id = ec2_helpers.get_ami_id(ssm_client, ec2_config.get("ami-name"))
 
     # --- deployment script to inject which will deploy the application
     app_deployment_script = base_dir / "compute" / "upload-app" / "deployment_script.sh"
@@ -93,7 +98,44 @@ def run():
         deployed_resources, "dynamodb", dynamodb_config.get("name")
     )
 
+    dynamodb_helpers.dynamodb_create_new_item_stream(
+        dynamodb_client, dynamodb_config.get("name")
+    )
+
+    config["runtime"]["db_stream_arn"] = dynamodb_helpers.dynamodb_get_stream_arn(
+        dynamodb_client, dynamodb_config.get("name")
+    )
+
     # DEPLOY S3 AND SQS ---------------------------------------------------
+    # --- create clients
+    cloudformation_client = boto3.client("cloudformation")
+    # --- get config details
+    cloudformation_config = resources.get("cloudformation").get("image-bucket-queue")
+    stack_name = cloudformation_config.get("name")
+    template_path = base_dir / "cloudformation" / "s3-sqs.yaml"
+    parameters = {
+        "BucketName": resources.get("s3").get("image-bucket").get("name"),
+        "QueueName": resources.get("sqs").get("notify-image").get("name"),
+    }
+
+    cloudformation_helpers.cloudformation_create_stack(
+        cloudformation_client,
+        stack_name,
+        str(template_path),
+        parameters,
+        tags=deployment_tags,
+    )
+
+    # --- get queue arn for later for the lambda function
+    cloudformation_outputs = cloudformation_helpers.cloudformation_get_outputs(
+        cloudformation_client, stack_name
+    )
+    config["runtime"]["sqs_queue_arn"] = cloudformation_outputs["ImageQueueArn"]
+
+    # --- add to deployed resources to track
+    deployed_resources = add_to_deployed_resources(
+        deployed_resources, "cloudformation", stack_name
+    )
 
     # CREATE TOPIC ---------------------------------------------------
     # --- create clients
@@ -104,8 +146,60 @@ def run():
         sns_client, sns_config.get("name"), deployment_tags
     )
     # --- add to deployed resources to track
-    deployed_resources = add_to_deployed_resources(
-        deployed_resources, "sns", topic_arn
-    )
+    deployed_resources = add_to_deployed_resources(deployed_resources, "sns", topic_arn)
 
     # DEPLOY LAMBDAS ---------------------------------------------------
+    # --- create clients
+    lambda_client = boto3.client("lambda")
+    # --- get config details
+    lambda_config = resources.get("lambda")
+
+    # --- image detection --------------------------
+    lambda_img_config = lambda_config.get("image-detection")
+    lambda_img_path = base_dir / "compute" / "lambda" / "image-detection"
+    lambda_img_zip = lambda_helpers.lambda_zip(lambda_img_path)
+    lambda_helpers.lambda_create(
+        lambda_client,
+        lambda_img_zip,
+        lambda_img_config.get("name"),
+        lambda_img_config.get("role"),
+        lambda_img_config.get("runtime"),
+        lambda_img_config.get("handler"),
+        deployment_tags,
+    )
+
+    # --- create trigger
+    lambda_helpers.lambda_create_sqs_trigger(
+        lambda_client,
+        config.get("runtime").get("sqs_queue_arn"),
+        lambda_img_config.get("name"),
+    )
+
+    # --- add to deployed resources to track
+    deployed_resources = add_to_deployed_resources(
+        deployed_resources, "lambda", lambda_img_config.get("name")
+    )
+
+    # --- send email --------------------------
+    lambda_email_config = lambda_config.get("send-email")
+    lambda_email_path = base_dir / "compute" / "lambda" / "send-email"
+    lambda_email_zip = lambda_helpers.lambda_zip(lambda_email_path)
+    lambda_helpers.lambda_create(
+        lambda_client,
+        lambda_email_zip,
+        lambda_email_config.get("name"),
+        lambda_email_config.get("role"),
+        lambda_email_config.get("runtime"),
+        lambda_email_config.get("handler"),
+        deployment_tags,
+    )
+
+    lambda_helpers.lambda_create_dbstream_trigger(
+        lambda_client, config.get("runtime").get("db_stream_arn"),
+        lambda_email_config.get("name")
+    )
+
+    # --- add to deployed resources to track
+    deployed_resources = add_to_deployed_resources(
+        deployed_resources, "lambda", lambda_email_config.get("name")
+    )

@@ -48,11 +48,5 @@ Resources:
                               aws:SourceArn: !Sub "arn:aws:s3:::${BucketName}"
 
 Outputs:
-    BucketName:
-        Value: !Ref ImageBucket
-
-    QueueURL:
-        Value: !Ref ImageQueue
-
     QueueArn:
         Value: !GetAtt ImageQueue.Arn

@@ -13,17 +13,21 @@ resources:
         instance-type: "t3.micro"
         min_count: 1
         max_count: 1
-
   s3:
     image-bucket:
       name: "bucket-images-2264323"
       config:
-
   lambda:
     image-detection: 
       name: "lambda-detection-s2264323"
+      role: ""
+      runtime: "python3.14"
+      handler: "lambda_handler"
     send-email:
       name: "lambda-email-s2264323"
+      role: ""
+      runtime: "python3.14"
+      handler: "lambda_handler"
   sqs:
     notify-image:
       name: "queue-images-s2264323"
@@ -38,14 +42,6 @@ resources:
   rekognition:
     image-detection:
       name: "rekognition-images-s2264323"
-
-iam:
-  ec2:
-    upload-image:
-      name: "bucket-images-role-2264323"
-  lambda:
-    image-detection:
-      name: "lambda-detection-role-s2264323"
-    send-email:
-      name: "lambda-email-role-s2264323"
-
+  cloudformation:
+    image-bucket-queue:
+      name: "stack-images-s2264323"

@@ -1,5 +1,8 @@
 # Operations to manage Lambda infrastructure
 import boto3
+from typing import Dict
+import zipfile
+from pathlib import Path
 
 
 def lambda_create(
@@ -9,11 +12,11 @@ def lambda_create(
     role: str,
     runtime: str,
     handler_name: str,
-    tags: dict = None,
+    tags: Dict = None,
     timeout: int = None,
     memory_size: int = None,
-    environment_variables: dict = None
-) -> dict:
+    environment_variables: Dict = None
+) -> Dict:
     """
     Creates a lambda function from zipped code
 
@@ -24,19 +27,19 @@ def lambda_create(
         role (str): role with which the lambda executes
         runtime (str): the runtime of the lambda function
         handler_name (str): name of the lambda handler function
-        tags (dict, optional): tags to be added to the lambda function. Defaults to None.
+        tags (Dict, optional): tags to be added to the lambda function. Defaults to None.
         timeout (int, optional): timeout of the lambda function. Defaults to None.
         memory_size (int, optional): memory size of the lambda function. Defaults to None.
-        environment_variables (dict, optional): environment variables to be accessible in the lambda. Defaults to None.
+        environment_variables (Dict, optional): environment variables to be accessible in the lambda. Defaults to None.
 
     Returns:
-        dict: reponse of the creation
+        Dict: reponse of the creation
     """
     # --- get zipped binary of code
     with open(lambda_zip_path, "rb") as f:
         zipped_code = f.read()
 
-    # --- create specification dict to add params to pass into creation
+    # --- create specification Dict to add params to pass into creation
     # --- other params are optional
     instance_specification = {
         "FunctionName": lambda_name,
@@ -70,7 +73,7 @@ def lambda_create(
     return response
 
 
-def lambda_delete(lambda_client: boto3.client, function_name: str) -> dict:
+def lambda_delete(lambda_client: boto3.client, function_name: str) -> Dict:
     """
     Delete the lambda function
 
@@ -79,13 +82,13 @@ def lambda_delete(lambda_client: boto3.client, function_name: str) -> dict:
         function_name (str): the name of the lambda function
 
     Returns:
-        dict: the deletion response
+        Dict: the deletion response
     """
 
     return lambda_client.delete_function(FunctionName=function_name)
 
 
-def lambda_describe(lambda_client: boto3.client, function_name: str) -> dict:
+def lambda_describe(lambda_client: boto3.client, function_name: str) -> Dict:
     """
     Describes an existing lambda function
 
@@ -94,7 +97,7 @@ def lambda_describe(lambda_client: boto3.client, function_name: str) -> dict:
         function_name (str): the name of the lambda function
 
     Returns:
-        dict: the description of the lambda function
+        Dict: the description of the lambda function
     """
 
     return lambda_client.get_function(FunctionName=function_name)
@@ -102,7 +105,7 @@ def lambda_describe(lambda_client: boto3.client, function_name: str) -> dict:
 
 def lambda_create_sqs_trigger(
     lambda_client: boto3.client, sqs_arn: str, function_name: str
-) -> dict:
+) -> Dict:
     """
     Creates an sqs trigger for a lambda function
 
@@ -112,7 +115,7 @@ def lambda_create_sqs_trigger(
         function_name (str): the name of the lambda function
 
     Returns:
-        dict: the creation response
+        Dict: the creation response
     """
 
     response = lambda_client.create_event_source_mapping(
@@ -124,7 +127,7 @@ def lambda_create_sqs_trigger(
 
 def lambda_create_dbstream_trigger(
     lambda_client: boto3.client, stream_arn: str, function_name: str
-) -> dict:
+) -> Dict:
     """
     Creates a dynamodb stream trigger for a lambda function
     Only gets the single latest record
@@ -135,7 +138,7 @@ def lambda_create_dbstream_trigger(
         function_name (str): the name of the lambda function
 
     Returns:
-        dict: the creation response
+        Dict: the creation response
     """
     response = lambda_client.create_event_source_mapping(
         EventSourceArn=stream_arn,
@@ -144,3 +147,22 @@ def lambda_create_dbstream_trigger(
         BatchSize=1
     )
     return response
+
+def lambda_zip(lambda_dir: str) -> str:
+    """
+    Creates a zip of a lambda function dir within the dir
+
+    Args:
+        lambda_dir (str): path to the lambda function directory
+
+    Returns:
+        str: path to the created zip file
+    """
+    lambda_dir = Path(lambda_dir)
+    output_path = lambda_dir.parent / f"{lambda_dir.name}.zip"
+    
+    with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        for file in lambda_dir.rglob("*"):
+            zf.write(file, file.relative_to(lambda_dir))
+    
+    return str(output_path)
