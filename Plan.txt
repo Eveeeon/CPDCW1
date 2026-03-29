@@ -98,6 +98,8 @@ Task breakdown:
         Create Lambda function 1:
             using: AWS console, CLI, or SDK
             trigger: SQS queue message
+            ami:
+                /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
             functions:
                 - Extract metadata from SQS message
                 - Invoke AWS Rekognition services (call for label detection and face detection)

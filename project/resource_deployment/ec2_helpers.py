@@ -1,6 +1,6 @@
 # Operations to manage EC2 infrastructure
 import boto3
-from typing import dict, list
+from typing import Dict, List
 
 def get_ami_id(ssm_client: boto3.client, ami_name: str) -> str:
     """
@@ -25,9 +25,9 @@ def ec2_create(
     max_count: int = 1,
     disk_size: int = None,
     disk_device_name: str = None,
-    tags: dict = None,
+    tags: Dict = None,
     subnet: str = None,
-    security_groups: list[str] = None,
+    security_groups: List[str] = None,
     user_data_script_path: str = None, 
 ) -> str:
     """
@@ -42,9 +42,9 @@ def ec2_create(
         max_count (int, optional): maximum number of instances. Defaults to 1.
         disk_size (int, optional): the size of the disk in gb, if given, disk_device_name also needs to be given. Defaults to None, so the aws default will be used.
         disk_device_name (str, optional): the name of the disk, if given, disk_size also needs to be given. Defaults to None, so the aws default will be used.
-        tags (dict, optional): tags to be added to the instance. Defaults to None.
+        tags (Dict, optional): tags to be added to the instance. Defaults to None.
         subnet (str, optional): the subnet id. Defaults to None and so the default subnet of the default vpc will be used.
-        security_groups (list[str], optional): list of security group ids. Defaults to None
+        security_groups (List[str], optional): List of security group ids. Defaults to None
         user_data_script_path: (str): path of script to run on the instance on start. Defaults to None
     
     Raises:
@@ -54,7 +54,7 @@ def ec2_create(
     Returns:
         str: the instance id
     """
-    # --- create specification dict to add params to pass into creation
+    # --- create specification Dict to add params to pass into creation
     # --- other params are optional
     instance_specification = {
         "ImageId": ami_id,
@@ -66,12 +66,13 @@ def ec2_create(
 
     # OPTIONALS ------------------
     # --- add tags if given
-    instance_specification["TagSpecifications"] = [
-        {
-            "ResourceType": "instance",
-            "Tags": [{"Key": key, "Value": value} for key, value in tags.items()],
-        }
-    ]
+    if tags:
+        instance_specification["TagSpecifications"] = [
+            {
+                "ResourceType": "instance",
+                "Tags": [{"Key": key, "Value": value} for key, value in tags.items()],
+            }
+        ]
 
     # --- add disk if given
     if disk_size and disk_device_name:
@@ -122,7 +123,7 @@ def ec2_create(
 
     return instance_id
 
-def ec2_terminate(ec2_client: boto3.client, instance_id: str)-> dict:
+def ec2_terminate(ec2_client: boto3.client, instance_id: str)-> Dict:
     """
     Terminate an ec2 instance
 
@@ -131,14 +132,14 @@ def ec2_terminate(ec2_client: boto3.client, instance_id: str)-> dict:
         instance_id (str): instance id of the ec2 instance
 
     Returns:
-        dict: information about the terminated instance
+        Dict: information about the terminated instance
     """
     response = ec2_client.terminate_instances(InstanceIds=[instance_id])
     waiter = ec2_client.get_waiter("instance_terminated")
     waiter.wait(InstanceIds=[instance_id])
     return response
 
-def ec2_start(ec2_client: boto3.client, instance_id: str)-> dict:
+def ec2_start(ec2_client: boto3.client, instance_id: str)-> Dict:
     """
     Start an existing ec2 instance
 
@@ -147,14 +148,14 @@ def ec2_start(ec2_client: boto3.client, instance_id: str)-> dict:
         instance_id (str): instance id of the ec2 instance
 
     Returns:
-        dict: information about the started instance
+        Dict: information about the started instance
     """
     response = ec2_client.start_instances(InstanceIds=[instance_id])
     waiter = ec2_client.get_waiter("instance_running")
     waiter.wait(InstanceIds=[instance_id])
     return response
 
-def ec2_stop(ec2_client: boto3.client, instance_id: str) -> dict:
+def ec2_stop(ec2_client: boto3.client, instance_id: str) -> Dict:
     """
     Stop a running ec2 instance
 
@@ -163,14 +164,14 @@ def ec2_stop(ec2_client: boto3.client, instance_id: str) -> dict:
         instance_id (str): instance id of the ec2 instance
 
     Returns:
-        dict: information about the stopped instance
+        Dict: information about the stopped instance
     """
     response = ec2_client.stop_instances(InstanceIds=[instance_id])
     waiter = ec2_client.get_waiter("instance_stopped")
     waiter.wait(InstanceIds=[instance_id])
     return response
 
-def ec2_describe(ec2_client: boto3.client, instance_id: str)-> dict:
+def ec2_describe(ec2_client: boto3.client, instance_id: str)-> Dict:
     """
     Describes the state of an ec2 instance
 
@@ -179,6 +180,6 @@ def ec2_describe(ec2_client: boto3.client, instance_id: str)-> dict:
         instance_id (str): instance id of the ec2 instance
 
     Returns:
-        dict: the description of the ec2 instance
+        Dict: the description of the ec2 instance
     """
     return ec2_client.describe_instances(InstanceIds=[instance_id])

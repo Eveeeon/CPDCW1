@@ -1,4 +1,7 @@
-student-id: "s2264323"
+tags:
+  student-id: "s2264323"
+  course: "gcu-cloudPlatformDevelopment"
+  application: "labelAndFaceDetectionSystem"
 
 resources:
   ec2:
