@@ -13,8 +13,8 @@ resources:
         ami-name: "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
         instance-profile: ""
         instance-type: "t3.micro"
-        min_count: 1
-        max_count: 1
+        min-count: 1
+        max-count: 1
   s3:
     image-bucket:
       name: "bucket-images-2264323"
@@ -24,12 +24,12 @@ resources:
       name: "lambda-detection-s2264323"
       role: ""
       runtime: "python3.14"
-      handler: "lambda_handler"
+      handler: "app.lambda_handler"
     send-email:
       name: "lambda-email-s2264323"
       role: ""
       runtime: "python3.14"
-      handler: "lambda_handler"
+      handler: "app.lambda_handler"
   sqs:
     notify-image:
       name: "queue-images-s2264323"
@@ -41,9 +41,6 @@ resources:
       name: "dynamodb-images-s2264323"
       partition-key: "name"
       partition-key-type: "S"
-  rekognition:
-    image-detection:
-      name: "rekognition-images-s2264323"
   cloudformation:
     image-bucket-queue:
       name: "stack-images-s2264323"

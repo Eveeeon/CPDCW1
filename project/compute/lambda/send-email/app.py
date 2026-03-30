@@ -38,7 +38,7 @@ def check_email_conditions(new_item: dict) -> bool:
 
     if "ANGRY" not in emotions:
         return False
-    angry_confidence = float(emotions.get("ANGRY"))
+    angry_confidence = float(emotions.get("ANGRY").get("N"))
     if angry_confidence < 80:
         return False
     

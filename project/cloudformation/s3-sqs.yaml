@@ -20,6 +20,7 @@ Resources:
     # S3 Bucket
     ImageBucket:
         Type: AWS::S3::Bucket
+        DependsOn: SQSPolicy
         Properties:
             BucketName: !Ref BucketName
 

@@ -28,7 +28,7 @@ def ec2_create(
     tags: Dict = None,
     subnet: str = None,
     security_groups: List[str] = None,
-    user_data_script_path: str = None, 
+    user_data_script: str = None, 
 ) -> str:
     """
     Creates an EC2 instance in a running state
@@ -45,7 +45,7 @@ def ec2_create(
         tags (Dict, optional): tags to be added to the instance. Defaults to None.
         subnet (str, optional): the subnet id. Defaults to None and so the default subnet of the default vpc will be used.
         security_groups (List[str], optional): List of security group ids. Defaults to None
-        user_data_script_path: (str): path of script to run on the instance on start. Defaults to None
+        user_data_script: (str): binary script to run on the instance on start. Defaults to None
     
     Raises:
         ValueError: if subnet is not found
@@ -109,10 +109,8 @@ def ec2_create(
         instance_specification["SecurityGroupIds"] = security_groups
 
     # --- add user data script if given
-    if user_data_script_path:
-        with open(user_data_script_path, "r") as script:
-            user_data = script.read()
-            instance_specification["UserData"] = user_data
+    if user_data_script:
+        instance_specification["UserData"] = user_data
 
     response = ec2_client.run_instances(**instance_specification)
     instance_id = response["Instances"][0]["InstanceId"]

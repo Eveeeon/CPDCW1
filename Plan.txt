@@ -271,6 +271,7 @@ references/links:
             update: https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_UpdateTable.html
             stream trigger: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Streams.Lambda.Tutorial2.html#Streams.Lambda.Tutorial2.CDK
             put: https://docs.aws.amazon.com/boto3/latest/reference/services/dynamodb/client/put_item.html
+            put floats: https://docs.aws.amazon.com/code-library/latest/ug/python_3_dynamodb_code_examples.html
         rekognition:
             methods: https://docs.aws.amazon.com/boto3/latest/reference/services/rekognition.html
             detectfaces: https://docs.aws.amazon.com/rekognition/latest/APIReference/API_DetectFaces.html

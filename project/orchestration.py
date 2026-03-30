@@ -63,16 +63,25 @@ def run():
     ami_id = ec2_helpers.get_ami_id(ssm_client, ec2_config.get("ami-name"))
 
     # --- deployment script to inject which will deploy the application
-    app_deployment_script = base_dir / "compute" / "upload-app" / "deployment_script.sh"
+    app_deployment_script_path = str(
+        base_dir / "compute" / "upload-app" / "deployment_script.sh"
+    )
+    with open(app_deployment_script_path, "r") as f:
+        deployment_script = f.read()
+    # Provide bucket name to be set as the environment variable
+    deployment_script = deployment_script.replace(
+        "{{S3_BUCKET_NAME}}", resources.get("s3").get("image-bucket").get("name")
+    )
 
     ec2_instance_id = ec2_helpers.ec2_create(
         ec2_client,
         ami_id,
         ec2_config.get("instance-profile"),
+        ec2_config.get("instance-type"),
         ec2_config.get("min-count"),
         ec2_config.get("max-count"),
         tags=deployment_tags,
-        user_data_script_path=str(app_deployment_script),
+        user_data_script=deployment_script,
     )
     # --- add to deployed resources to track
     deployed_resources = add_to_deployed_resources(
@@ -130,7 +139,7 @@ def run():
     cloudformation_outputs = cloudformation_helpers.cloudformation_get_outputs(
         cloudformation_client, stack_name
     )
-    config["runtime"]["sqs_queue_arn"] = cloudformation_outputs["ImageQueueArn"]
+    config["runtime"]["sqs_queue_arn"] = cloudformation_outputs["QueueArn"]
 
     # --- add to deployed resources to track
     deployed_resources = add_to_deployed_resources(

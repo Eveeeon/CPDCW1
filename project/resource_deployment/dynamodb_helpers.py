@@ -53,6 +53,9 @@ def dynamodb_create_table(
     # --- create table
     response = dynamodb_client.create_table(**instance_specification)
 
+    # --- wait for creation
+    waiter = dynamodb_client.get_waiter("table_exists")
+    waiter.wait(TableName=table_name)
     return response
 
 

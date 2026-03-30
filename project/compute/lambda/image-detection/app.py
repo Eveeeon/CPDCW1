@@ -2,7 +2,7 @@ import json
 import boto3
 import urllib
 from datetime import datetime, timezone
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Decimal
 import os
 
 # CONFIG
@@ -29,7 +29,8 @@ def lambda_handler(event, context):
 
         # --- explicity handle driving as a field in the table
         driving_detected = "Driving" in detected_labels
-        driving_confidence = detected_labels.get("Driving", 0)
+        # --- dynamodb cannot take floats, it requires doubles, to prevent precision artifacts, cast to string first
+        driving_confidence = Decimal(str(detected_labels.get("Driving", 0)))
 
         # --- to allow for multiple emotions, add emotion dictionary under emotions
         dynamodb_table.put_item(
@@ -37,7 +38,7 @@ def lambda_handler(event, context):
                 "name": s3_image_ref["S3Object"]["Name"],
                 "datetime_received": datetime.now(timezone.utc).isoformat(),
                 "is-driving": driving_detected,
-                "driving_confidence": driving_confidence,
+                "driving_confidence": Decimal(str(driving_confidence)),
                 "emotions": detected_emotions,
             }
         )
@@ -90,7 +91,8 @@ def determine_emotions(
     for face in faces:
         for emotion in face.get("Emotions", []):
             emotion_type = emotion["Type"]
-            confidence = emotion["Confidence"]
+            # --- dynamodb cannot take floats, it requires doubles, to prevent precision artifacts, cast to string first
+            confidence = Decimal(str(emotion["Confidence"]))
             if emotion_type in selected_emotions:
                 if (
                     emotion_type not in highest_selected_emotions
