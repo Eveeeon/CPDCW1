@@ -11,7 +11,7 @@ from project.orchestration import (
     deploy_dynamodb,
     deploy_cloudformation,
     deploy_sns,
-    run_deployment
+    run_deployment,
 )
 
 
@@ -21,6 +21,7 @@ def aws_credentials():
     os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
     os.environ["AWS_ACCESS_KEY_ID"] = "testing"
     os.environ["AWS_SECRET_ACCESS_KEY"] = "testing"
+
 
 # CONFIG
 @pytest.fixture
@@ -39,6 +40,7 @@ def base_dir():
 
 # HELPER FUNCTIONS --------------------------------------
 
+
 def test_add_to_deployed_resources_new_key():
     # --- adding a resource type that doesn't exist yet should create the key
     result = add_to_deployed_resources({}, "ec2", "i-1234")
@@ -53,18 +55,31 @@ def test_add_to_deployed_resources_existing_key():
 
 # DEPLOY EC2 --------------------------------------
 
+
 @mock_aws
 def test_deploy_ec2(config, base_dir):
     # --- create instance profile
-    iam = boto3.client("iam", region_name="us-east-1")
-    iam.create_instance_profile(InstanceProfileName="LabUser")
+    iam_client = boto3.client("iam", region_name="us-east-1")
+    iam_client.create_instance_profile(InstanceProfileName="LabUser")
     # --- set up a fake ami to launch against
-    ec2 = boto3.client("ec2", region_name="us-east-1")
-    fake_ami = ec2.describe_images(Owners=["amazon"])["Images"][0]["ImageId"]
-    config["resources"]["ec2"]["upload-image"]["ami-name"] = fake_ami
+    ec2_client = boto3.client("ec2", region_name="us-east-1")
+    test_ami = ec2_client.describe_images(Owners=["amazon"])["Images"][0]["ImageId"]
+    config["resources"]["ec2"]["upload-image"]["ami-name"] = test_ami
+
+    # --- mock default security group for testing
+    # --- get default vpc
+    vpc_id = ec2_client.describe_vpcs()["Vpcs"][0]["VpcId"]
+    # ---create security group
+    security_group = ec2_client.create_security_group(
+        GroupName="test", Description="test security group", VpcId=vpc_id
+    )
+    # --- update config with id
+    config["resources"]["ec2"]["upload-image"]["security-group"] = security_group[
+        "GroupId"
+    ]
 
     # --- fake ami id for the ami name
-    with patch("project.orchestration.ec2_helpers.get_ami_id", return_value=fake_ami):
+    with patch("project.orchestration.ec2_helpers.get_ami_id", return_value=test_ami):
         updated_config, updated_deployed = deploy_ec2(config, {}, base_dir)
 
     # --- check 1 - added to deployed resources
@@ -73,11 +88,12 @@ def test_deploy_ec2(config, base_dir):
 
     # --- check 2 - it's actually deployed
     instance_id = updated_deployed["ec2"][0]
-    response = ec2.describe_instances(InstanceIds=[instance_id])
+    response = ec2_client.describe_instances(InstanceIds=[instance_id])
     assert len(response["Reservations"]) == 1
 
 
 # DEPLOY DYNAMODB --------------------------------------
+
 
 @mock_aws
 def test_deploy_dynamodb(config):
@@ -98,6 +114,7 @@ def test_deploy_dynamodb(config):
 
 
 # DEPLOY CLOUDFORMATION S3 SQS --------------------------------------
+
 
 @mock_aws
 def test_deploy_cloudformation(config, base_dir):
@@ -123,6 +140,7 @@ def test_deploy_cloudformation(config, base_dir):
 
 # DEPLOY SNS --------------------------------------
 
+
 @mock_aws
 def test_deploy_sns(config):
     updated_config, updated_deployed = deploy_sns(config, {})
@@ -139,11 +157,12 @@ def test_deploy_sns(config):
 
 # DEPLOY E2E --------------------------------------
 
+
 @mock_aws
 def test_deploy_all(config):
     # --- create role
-    iam = boto3.client("iam", region_name="us-east-1")
-    iam.create_role(
+    iam_client = boto3.client("iam", region_name="us-east-1")
+    iam_client.create_role(
         RoleName="LabRole",
         AssumeRolePolicyDocument="""{
             "Version": "2012-10-17",
@@ -154,10 +173,23 @@ def test_deploy_all(config):
                     "Action": "sts:AssumeRole"
                 }
             ]
-        }"""
+        }""",
     )
     # --- create instance profile
-    iam.create_instance_profile(InstanceProfileName="LabUser")
+    iam_client.create_instance_profile(InstanceProfileName="LabUser")
+    # --- mock default security group for testing
+    # --- get default vpc
+    ec2_client = boto3.client("ec2", region_name="us-east-1")
+    vpc_id = ec2_client.describe_vpcs()["Vpcs"][0]["VpcId"]
+    # ---create security group
+    security_group = ec2_client.create_security_group(
+        GroupName="test", Description="test security group", VpcId=vpc_id
+    )
+    # --- update config with id
+    config["resources"]["ec2"]["upload-image"]["security-group"] = security_group[
+        "GroupId"
+    ]
+
     deployed_resources = {}
     project_dir = Path(__file__).resolve().parent.parent
     deployed_resources = run_deployment(config, deployed_resources, project_dir)

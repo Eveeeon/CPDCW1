@@ -2,6 +2,7 @@
 import boto3
 from typing import Dict, List
 
+
 def get_ami_id(ssm_client: boto3.client, ami_name: str) -> str:
     """
     Gets the latest ami id for a give ami name
@@ -13,7 +14,7 @@ def get_ami_id(ssm_client: boto3.client, ami_name: str) -> str:
     Returns:
         str: amazon machine image name
     """
-    return ssm_client.get_parameter(Name=ami_name)['Parameter']['Value']
+    return ssm_client.get_parameter(Name=ami_name)["Parameter"]["Value"]
 
 
 def ec2_create(
@@ -28,7 +29,7 @@ def ec2_create(
     tags: Dict = None,
     subnet: str = None,
     security_groups: List[str] = None,
-    user_data_script: str = None, 
+    user_data_script: str = None,
 ) -> str:
     """
     Creates an EC2 instance in a running state
@@ -46,7 +47,7 @@ def ec2_create(
         subnet (str, optional): the subnet id. Defaults to None and so the default subnet of the default vpc will be used.
         security_groups (List[str], optional): List of security group ids. Defaults to None
         user_data_script: (str): binary script to run on the instance on start. Defaults to None
-    
+
     Raises:
         ValueError: if subnet is not found
         ValueError: if any of the security groups are not found
@@ -90,8 +91,8 @@ def ec2_create(
             Filters=[{"Name": "subnet-id", "Values": [subnet]}]
         )
         if len(results["Subnets"]) == 0:
-            raise ValueError(f'Subnet {subnet} not found')
-        
+            raise ValueError(f"Subnet {subnet} not found")
+
         # --- add to specification
         instance_specification["SubnetId"] = subnet
 
@@ -99,12 +100,12 @@ def ec2_create(
     if security_groups:
         # --- describe security groups filtering by given group ids
         results = ec2_client.describe_security_groups(GroupIds=security_groups)
-        found_ids = [sg['GroupId'] for sg in results['SecurityGroups']]
+        found_ids = [sg["GroupId"] for sg in results["SecurityGroups"]]
         # --- ensure all groups were found, else throw
         missing = set(security_groups) - set(found_ids)
         if len(missing) > 0:
             raise ValueError(f"Could not find security groups: {missing}")
-        
+
         # --- add to specification
         instance_specification["SecurityGroupIds"] = security_groups
 
@@ -115,13 +116,35 @@ def ec2_create(
     response = ec2_client.run_instances(**instance_specification)
     instance_id = response["Instances"][0]["InstanceId"]
 
-
     waiter = ec2_client.get_waiter("instance_running")
     waiter.wait(InstanceIds=[instance_id])
 
     return instance_id
 
-def ec2_terminate(ec2_client: boto3.client, instance_id: str)-> Dict:
+
+def ec2_add_inbound(ec2_client: boto3.client, security_group_id: str):
+    """
+    Adds inbound rule to security group
+
+    Args:
+        ec2_client (boto3.client): a boto3 ec2 client instance
+        security_group_id (str): id of the security group
+    """
+    # --- allow inbound connections
+    ec2_client.authorize_security_group_ingress(
+        GroupId=security_group_id,
+        IpPermissions=[
+            {
+                "IpProtocol": "tcp",
+                "FromPort": 22,
+                "ToPort": 22,
+                "IpRanges": [{"CidrIp": "0.0.0.0/0"}],
+            }
+        ],
+    )
+
+
+def ec2_terminate(ec2_client: boto3.client, instance_id: str) -> Dict:
     """
     Terminate an ec2 instance
 
@@ -137,7 +160,8 @@ def ec2_terminate(ec2_client: boto3.client, instance_id: str)-> Dict:
     waiter.wait(InstanceIds=[instance_id])
     return response
 
-def ec2_start(ec2_client: boto3.client, instance_id: str)-> Dict:
+
+def ec2_start(ec2_client: boto3.client, instance_id: str) -> Dict:
     """
     Start an existing ec2 instance
 
@@ -152,6 +176,7 @@ def ec2_start(ec2_client: boto3.client, instance_id: str)-> Dict:
     waiter = ec2_client.get_waiter("instance_running")
     waiter.wait(InstanceIds=[instance_id])
     return response
+
 
 def ec2_stop(ec2_client: boto3.client, instance_id: str) -> Dict:
     """
@@ -169,7 +194,8 @@ def ec2_stop(ec2_client: boto3.client, instance_id: str) -> Dict:
     waiter.wait(InstanceIds=[instance_id])
     return response
 
-def ec2_describe(ec2_client: boto3.client, instance_id: str)-> Dict:
+
+def ec2_describe(ec2_client: boto3.client, instance_id: str) -> Dict:
     """
     Describes the state of an ec2 instance
 

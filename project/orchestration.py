@@ -39,11 +39,15 @@ def run():
 
     # RUN DEPLOYMENT FUNCTIONS
     try:
-        run_deployment(config, deployed_resources, base_dir)
+        deployed_resources = run_deployment(config, deployed_resources, base_dir)
+        # --- allow for resources to be automatically decomissioned
+        input("Press enter to delete all deployed resources...")
+        cleanup(deployed_resources)
     except Exception as e:
         raise
 
-def run_deployment(config: Dict, deployed_resources: Dict, base_dir: Path):
+
+def run_deployment(config: Dict, deployed_resources: Dict, base_dir: Path) -> Dict:
     """
     Runs all deployments, takes config, path, and previously deployed resources, adding to them
     The purpose is to separate deployment from config management for testing
@@ -52,7 +56,7 @@ def run_deployment(config: Dict, deployed_resources: Dict, base_dir: Path):
         config (Dict): config dict
         deployed_resources (Dict): the deployed resourced object to add to
         base_dir (Path): the base directory of the deployment project
-    
+
     Returns:
         Dict: updated deployed resources dictionary
     """
@@ -70,7 +74,9 @@ def run_deployment(config: Dict, deployed_resources: Dict, base_dir: Path):
     except Exception as e:
         raise
 
+
 # CLEANUP FUNCTION ---------------------------------------------------
+
 
 def cleanup(deployed_resources: Dict):
     """
@@ -96,7 +102,9 @@ def cleanup(deployed_resources: Dict):
 
     for stack_name in deployed_resources.get("cloudformation", []):
         try:
-            cloudformation_helpers.cloudformation_delete_stack(boto3.client("cloudformation"), stack_name)
+            cloudformation_helpers.cloudformation_delete_stack(
+                boto3.client("cloudformation"), stack_name
+            )
             logger.info(f"Deleted CloudFormation stack: {stack_name}")
         except Exception as e:
             logger.error(f"Failed to delete CloudFormation stack {stack_name}: {e}")
@@ -117,6 +125,7 @@ def cleanup(deployed_resources: Dict):
 
 
 # HELPER FUNCTIONS ---------------------------------------------------
+
 
 def add_to_deployed_resources(
     deployed_resources: Dict, resource_type: str, id: str
@@ -143,6 +152,7 @@ def add_to_deployed_resources(
 
 
 # INDIVIDUAL DEPLOYMENT FUNCTIONS ---------------------------------------------------
+
 
 def deploy_ec2(
     config: Dict, deployed_resources: Dict, base_dir: Path
@@ -191,6 +201,9 @@ def deploy_ec2(
     deployed_resources = add_to_deployed_resources(
         deployed_resources, "ec2", ec2_instance_id
     )
+
+    # --- add inbound rule to security group
+    ec2_helpers.ec2_add_inbound(ec2_client, ec2_config.get("security-group"))
     return config, deployed_resources
 
 
@@ -370,7 +383,6 @@ def deploy_lambdas(
         lambda_img_config.get("name"),
     )
     logger.info(f"image-detection Lambda deployed: {lambda_img_config.get("name")}")
-
 
     # --- add to deployed resources to track
     deployed_resources = add_to_deployed_resources(
