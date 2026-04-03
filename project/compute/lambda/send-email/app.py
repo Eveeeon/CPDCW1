@@ -1,8 +1,15 @@
 import boto3
 import os
+import logging
 
+# LOGGING
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+# CLIENTS/RESOURCES
 sns_client = boto3.client("sns")
 
+# CONFIG
 topic_arn = os.environ["SNS_TOPIC_ARN"]
 
 def lambda_handler(event, context):
@@ -11,8 +18,10 @@ def lambda_handler(event, context):
     for record in events:
         # --- get the new item added to the db
         new_item = record["dynamodb"]["NewImage"]
+        logger.info(f"New item added to the dynamodb table: {new_item}")
         to_email = check_email_conditions(new_item)
         if to_email:
+            logger.info(f"{new_item} satisfies email conditions, sending email")
             publish_message(sns_client, topic_arn)
 
 def check_email_conditions(new_item: dict) -> bool:

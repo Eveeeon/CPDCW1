@@ -59,7 +59,7 @@ def ec2_create(
     instance_specification = {
         "ImageId": ami_id,
         "InstanceType": instance_type,
-        "IAMInstanceProfile": {"Name": instance_profile_name},
+        "IamInstanceProfile": {"Name": instance_profile_name},
         "MinCount": min_count,
         "MaxCount": max_count,
     }
@@ -110,7 +110,7 @@ def ec2_create(
 
     # --- add user data script if given
     if user_data_script:
-        instance_specification["UserData"] = user_data
+        instance_specification["UserData"] = user_data_script
 
     response = ec2_client.run_instances(**instance_specification)
     instance_id = response["Instances"][0]["InstanceId"]

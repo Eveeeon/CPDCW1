@@ -4,6 +4,11 @@ import urllib
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Decimal
 import os
+import logging
+
+# LOGGING
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 # CONFIG
 table_name = os.environ["DB_TABLE_NAME"]
@@ -15,11 +20,21 @@ rekognition_client = boto3.client("rekognition")
 dynamodb_resource = boto3.resource("dynamodb")
 dynamodb_table = dynamodb_resource.Table(table_name)
 
+
 def lambda_handler(event, context):
     events = event["Records"]
     # --- loop through in cases messages got batched
     for record in events:
         s3_image_ref = get_s3_image_reference(record)
+        image_name = s3_image_ref["S3Object"]["Name"]
+        logger.info(f"Processing {image_name}")
+
+        # --- check item not already in DB, if so, skip
+        existing = dynamodb_table.get_item(Key={"name": image_name})
+        if "Item" in existing:
+            logger.warning(f"Image already processed, skipping: {image_name}")
+            continue
+
         detected_emotions = determine_emotions(
             rekognition_client, s3_image_ref, selected_emotions
         )
@@ -99,7 +114,9 @@ def determine_emotions(
                     or confidence > highest_selected_emotions[emotion_type]
                 ):
                     # --- if the emotion hasn't been detected yet, or if it is a higher confidence, add/update it to return value
+                    logger.info(f"Detected {emotion_type} at {confidence} level")
                     highest_selected_emotions[emotion_type] = confidence
+
 
     return highest_selected_emotions
 
@@ -136,5 +153,6 @@ def determine_labels(
         # --- only return labels found that are in selected labels
         if name in selected_labels:
             found_labels[name] = confidence
+            logger.info(f"Detected {name} at {confidence} confidence level")
 
     return found_labels

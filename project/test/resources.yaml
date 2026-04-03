@@ -10,7 +10,7 @@ resources:
     upload-image: 
       name: "ec2-upload-s2264323"
       ami-name: "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
-      instance-profile: ""
+      instance-profile: "LabUser"
       instance-type: "t3.micro"
       min-count: 1
       max-count: 1
@@ -20,12 +20,12 @@ resources:
   lambda:
     image-detection: 
       name: "lambda-detection-s2264323"
-      role: ""
+      role: "arn:aws:iam::123456789012:role/LabRole"
       runtime: "python3.14"
       handler: "app.lambda_handler"
     send-email:
       name: "lambda-email-s2264323"
-      role: ""
+      role: "arn:aws:iam::123456789012:role/LabRole"
       runtime: "python3.14"
       handler: "app.lambda_handler"
   sqs:
