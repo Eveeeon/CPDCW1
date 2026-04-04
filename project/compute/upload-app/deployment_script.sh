@@ -6,7 +6,7 @@ yum update -y
 yum install -y python3 git python3-pip
 python3 -m pip install boto3
 
-# Set bucket name as environment variable to, will provide actuall name during deployment
+# Set bucket name as environment variable to, will provide actual name during deployment
 export S3_BUCKET_NAME="{{S3_BUCKET_NAME}}"
 
 # Clone repo
