@@ -3,6 +3,7 @@ import time
 import logging
 import pathlib
 from pathlib import Path
+import os
 from botocore.exceptions import ClientError
 
 # Helpers
@@ -50,7 +51,7 @@ def upload_file(s3_client: boto3.client, bucket: str, file_path: pathlib.Path):
 
 
 def get_next_file(
-    directory: str, type_ext: set[str], max_size_mb: int, min_size_mb: int
+    directory: Path, type_ext: set[str], max_size_mb: float, min_size_mb: float
 ) -> pathlib.Path:
     """
     Gets the next file to be uploaded, takes the oldest file in the directory matching any of the given file extensions
@@ -58,8 +59,8 @@ def get_next_file(
     Args:
         directory (str): the directory containing the files
         type_ext (set[str]): set of file extensions e.g. {".png", ".jpg"}
-        max_size_mb (int): max valid file size in mb
-        min_size_mb (int): min valid file size in mb
+        max_size_mb (float): max valid file size in mb
+        min_size_mb (float): min valid file size in mb
 
     Returns:
         pathlib.Path: the file path of the next file
@@ -78,8 +79,8 @@ def get_next_file(
 def validate_file(
     file_path: pathlib.Path,
     type_ext: set[str],
-    max_size_mb: int,
-    min_size_mb: int,
+    max_size_mb: float,
+    min_size_mb: float,
 ) -> bool:
     """
     Filter function to determine if the file a file is valid
@@ -87,8 +88,8 @@ def validate_file(
     Args:
         file_path (pathlib.Path): path of file
         type_ext (set[str]): set of valid types
-        max_size_mb (int): max valid file size in mb
-        min_size_mb (int): min valid file size in mb
+        max_size_mb (float): max valid file size in mb
+        min_size_mb (float): min valid file size in mb
 
     Returns:
         bool: if the file is valid
@@ -111,8 +112,8 @@ def process_file(
     directory: str,
     type_ext: set[str],
     logger: logging.Logger,
-    max_size_mb: int,
-    min_size_mb: int,    
+    max_size_mb: float,
+    min_size_mb: float,    
 ):
     """
     Gets the next file to be uploaded, performs checks, uploads, and deletes the file
@@ -123,8 +124,8 @@ def process_file(
         directory (str): directory of the files to be uploaded
         type_ext (set[str]): set of file extensions e.g. {".png", ".jpg"}
         logger (logging.Logger): logger
-        max_size_mb (int): max valid file size in mb
-        min_size_mb (int): min valid file size in mb
+        max_size_mb (float): max valid file size in mb
+        min_size_mb (float): min valid file size in mb
     """
     next_file = get_next_file(directory, type_ext, max_size_mb, min_size_mb)
     if not next_file:
@@ -161,10 +162,10 @@ def main():
     base_dir = Path(__file__).parent
     directory = base_dir / "uploadfiles"
     log_file = base_dir / "uploader.log"
-    bucket = "bucket-images-s2264323"
+    bucket = os.environ.get("S3_BUCKET_NAME", "bucket-images-s2264323")
     interval = 30
-    valid_extensions = {".jpg", ".jpeg", ".png"}
-    max_size_mb, min_size_mb = 1000, 1
+    valid_extensions = {".jpg", ".jpeg", ".png", ".jfif"}
+    max_size_mb, min_size_mb = 1000, 0
     logging.basicConfig(
         filename=log_file,
         level=logging.INFO,
@@ -181,16 +182,18 @@ def main():
 
     # --- keep the app running, processing a file after interval
     while True:
-
-        process_file(
-            s3_client,
-            bucket,
-            directory,
-            valid_extensions,
-            logger,
-            max_size_mb,
-            min_size_mb
-        )
+        try:
+            process_file(
+                s3_client,
+                bucket,
+                directory,
+                valid_extensions,
+                logger,
+                max_size_mb,
+                min_size_mb
+            )
+        except Exception as e:
+            logger.exception(f"Unexpected error: {e}")
 
         time.sleep(interval)
 

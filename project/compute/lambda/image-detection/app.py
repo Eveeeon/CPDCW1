@@ -2,7 +2,8 @@ import json
 import boto3
 import urllib
 from datetime import datetime, timezone
-from typing import List, Dict, Any, Decimal
+from typing import List, Dict, Any
+from decimal import Decimal
 import os
 import logging
 
@@ -22,10 +23,15 @@ dynamodb_table = dynamodb_resource.Table(table_name)
 
 
 def lambda_handler(event, context):
+    # --- log event to see message structure
+    logger.info(f"Raw event: {json.dumps(event)}")
     events = event["Records"]
     # --- loop through in cases messages got batched
     for record in events:
         s3_image_ref = get_s3_image_reference(record)
+        if s3_image_ref is None:
+            # --- skip if not an s3 message
+            continue
         image_name = s3_image_ref["S3Object"]["Name"]
         logger.info(f"Processing {image_name}")
 
@@ -73,6 +79,12 @@ def get_s3_image_reference(record: Any) -> Dict:
     """
     # --- take the first record, as we are only sending one file per message
     body = json.loads(record["body"])
+
+    # --- handle test message with no records
+    if "Records" not in body:
+        logger.info("Skipping non-S3 event message")
+        return None
+
     s3_record = body["Records"][0]["s3"]
     bucket = s3_record["bucket"]["name"]
     key = urllib.parse.unquote_plus(s3_record["object"]["key"], encoding="utf-8")

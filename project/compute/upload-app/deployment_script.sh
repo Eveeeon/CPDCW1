@@ -3,7 +3,7 @@
 
 # Update and install
 yum update -y
-yum install -y python3 git
+yum install -y python3 git python3-pip
 python3 -m pip install boto3
 
 # Set bucket name as environment variable to, will provide actuall name during deployment
@@ -13,10 +13,11 @@ export S3_BUCKET_NAME="{{S3_BUCKET_NAME}}"
 cd /home/ec2-user
 git clone https://github.com/Eveeeon/CPDCW1.git
 
-cd /home/ec2-user/CPDCW1/compute/upload-app
+# Create upload directory in home
+mkdir -p /home/ec2-user/CPDCW1/project/compute/upload-app/uploadfiles
+# Make sure it is writable
+chown ec2-user:ec2-user /home/ec2-user/CPDCW1/project/compute/upload-app/uploadfiles
 
-# create upload directory inside app
-mkdir -p uploadfiles
-
-# run uploader
+# Run app
+cd /home/ec2-user/CPDCW1/project/compute/upload-app
 python3 app.py &

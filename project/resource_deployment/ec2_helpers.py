@@ -1,5 +1,6 @@
 # Operations to manage EC2 infrastructure
 import boto3
+from botocore.exceptions import ClientError
 from typing import Dict, List
 
 
@@ -131,17 +132,23 @@ def ec2_add_inbound(ec2_client: boto3.client, security_group_id: str):
         security_group_id (str): id of the security group
     """
     # --- allow inbound connections
-    ec2_client.authorize_security_group_ingress(
-        GroupId=security_group_id,
-        IpPermissions=[
-            {
-                "IpProtocol": "tcp",
-                "FromPort": 22,
-                "ToPort": 22,
-                "IpRanges": [{"CidrIp": "0.0.0.0/0"}],
-            }
-        ],
-    )
+    try:
+        ec2_client.authorize_security_group_ingress(
+            GroupId=security_group_id,
+            IpPermissions=[
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 22,
+                    "ToPort": 22,
+                    "IpRanges": [{"CidrIp": "0.0.0.0/0"}],
+                }
+            ],
+        )
+    except ClientError as e:
+        # --- if the perimissions already exist, it is fine, don't throw
+        # --- only throw if error is different
+        if e.response["Error"]["Code"] != "InvalidPermission.Duplicate":
+            raise
 
 
 def ec2_terminate(ec2_client: boto3.client, instance_id: str) -> Dict:

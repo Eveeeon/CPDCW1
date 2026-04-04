@@ -14,7 +14,7 @@ resources:
       instance-type: "t3.micro"
       min-count: 1
       max-count: 1
-      security-group: "sg-04f875cd8e525be60"
+      security-group: "sg-01aa277eb0d53f66e"
   s3:
     image-bucket:
       name: "bucket-images-s2264323"

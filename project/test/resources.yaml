@@ -21,12 +21,12 @@ resources:
   lambda:
     image-detection: 
       name: "lambda-detection-s2264323"
-      role: "arn:aws:iam::123456789012:role/LabRole"
+      role: "arn:aws:iam::232374568158:role/LabRole"
       runtime: "python3.14"
       handler: "app.lambda_handler"
     send-email:
       name: "lambda-email-s2264323"
-      role: "arn:aws:iam::123456789012:role/LabRole"
+      role: "arn:aws:iam::232374568158:role/LabRole"
       runtime: "python3.14"
       handler: "app.lambda_handler"
   sqs:
