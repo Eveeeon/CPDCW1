@@ -258,7 +258,6 @@ references/links:
             create: https://docs.aws.amazon.com/boto3/latest/reference/services/ec2/service-resource/create_instances.html
             AMI:
                 ssm: 
-                    - https://www.saisci.com/aws/list-of-public-ssm-parameters-for-amazon-linux-amis-ami-amazon-linux-latest/
                     - https://docs.aws.amazon.com/boto3/latest/reference/services/ssm/client/get_parameter.html
                     - https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-public-parameters-ami.html
                     - https://docs.aws.amazon.com/linux/al2023/ug/ec2.html
